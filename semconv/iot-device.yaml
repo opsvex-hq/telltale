@@ -1,0 +1,236 @@
+# Proposed OpenTelemetry semantic conventions for constrained IoT devices.
+#
+# Status: draft, not submitted upstream yet. See RATIONALE.md for what gap
+# this fills, what evidence supports it, and how it is meant to be proposed.
+#
+# Written in the schema used by open-telemetry/semantic-conventions so that
+# the diff against that repository is mechanical rather than a rewrite.
+#
+# Copyright (c) 2026 Opsvex SpA. SPDX-License-Identifier: Apache-2.0
+
+groups:
+  # --------------------------------------------------------------------------
+  # Attributes
+  # --------------------------------------------------------------------------
+  - id: registry.device.health
+    type: attribute_group
+    display_name: Device health attributes
+    brief: >
+      Attributes describing the health and lifecycle of a constrained device
+      (microcontroller-class hardware running an RTOS or bare metal).
+    attributes:
+      - id: device.reset.reason
+        type:
+          members:
+            - id: power_on
+              value: "power_on"
+              brief: The device was powered on or the supply was cycled.
+              stability: development
+            - id: external
+              value: "external"
+              brief: An external reset signal, typically a reset button or pin.
+              stability: development
+            - id: software
+              value: "software"
+              brief: The firmware restarted itself deliberately, e.g. after an update.
+              stability: development
+            - id: panic
+              value: "panic"
+              brief: The firmware crashed and the panic handler restarted it.
+              stability: development
+            - id: interrupt_watchdog
+              value: "interrupt_watchdog"
+              brief: An interrupt watchdog fired, usually a blocked ISR.
+              stability: development
+            - id: task_watchdog
+              value: "task_watchdog"
+              brief: A task watchdog fired, usually a task that stopped yielding.
+              stability: development
+            - id: other_watchdog
+              value: "other_watchdog"
+              brief: Another hardware watchdog fired.
+              stability: development
+            - id: deep_sleep
+              value: "deep_sleep"
+              brief: The device woke from a deep-sleep state.
+              stability: development
+            - id: brownout
+              value: "brownout"
+              brief: The supply voltage fell below the brownout threshold.
+              stability: development
+            - id: unknown
+              value: "unknown"
+              brief: The platform could not report a cause.
+              stability: development
+        stability: development
+        brief: >
+          Why the device restarted. This is the single most diagnostic field a
+          constrained device can report: a fleet whose reboots are `power_on`
+          has a power problem, one whose reboots are `panic` has a firmware
+          problem, and one whose reboots are `brownout` has a battery or supply
+          problem. They are indistinguishable from uptime alone.
+        examples: ["panic", "brownout"]
+
+      - id: device.task.name
+        type: string
+        stability: development
+        brief: Name of an RTOS task, as given at creation.
+        examples: ["app_main", "mqtt_client"]
+
+      - id: network.link.channel
+        type: int
+        stability: development
+        brief: Radio channel currently in use.
+        examples: [6, 11]
+
+  # --------------------------------------------------------------------------
+  # Memory metrics
+  # --------------------------------------------------------------------------
+  - id: metric.device.heap.free
+    type: metric
+    metric_name: device.heap.free
+    stability: development
+    brief: Bytes of heap currently available for allocation.
+    instrument: updowncounter
+    unit: "By"
+
+  - id: metric.device.heap.total
+    type: metric
+    metric_name: device.heap.total
+    stability: development
+    brief: Total heap size of the device.
+    instrument: updowncounter
+    unit: "By"
+
+  - id: metric.device.heap.min_free
+    type: metric
+    metric_name: device.heap.min_free
+    stability: development
+    brief: >
+      Lowest value `device.heap.free` has reached since boot. The high-water
+      mark of memory pressure, and the number that tells you how close a device
+      came to failing an allocation between two samples.
+    instrument: updowncounter
+    unit: "By"
+
+  - id: metric.device.heap.largest_free_block
+    type: metric
+    metric_name: device.heap.largest_free_block
+    stability: development
+    brief: >
+      Largest single allocation that can currently succeed. Reported separately
+      from `device.heap.free` because the two diverge exactly when a device is
+      about to fail: plenty of free memory, none of it contiguous.
+    instrument: updowncounter
+    unit: "By"
+
+  - id: metric.device.heap.fragmentation
+    type: metric
+    metric_name: device.heap.fragmentation
+    stability: development
+    brief: >
+      `1 - device.heap.largest_free_block / device.heap.free`, from 0
+      (one contiguous block) to 1 (shattered).
+    instrument: gauge
+    unit: "1"
+
+  # --------------------------------------------------------------------------
+  # Lifecycle metrics
+  # --------------------------------------------------------------------------
+  - id: metric.device.uptime
+    type: metric
+    metric_name: device.uptime
+    stability: development
+    brief: Seconds since the device last started.
+    instrument: gauge
+    unit: "s"
+
+  - id: metric.device.boot.count
+    type: metric
+    metric_name: device.boot.count
+    stability: development
+    brief: >
+      Number of times the device has started, persisted across reboots. Unlike
+      uptime, this survives the restart it is describing, which is what makes a
+      reboot loop visible in a metrics backend.
+    instrument: counter
+    unit: "{boot}"
+
+  - id: metric.device.reset
+    type: metric
+    metric_name: device.reset
+    stability: development
+    brief: >
+      Constant 1 carrying `device.reset.reason` as an attribute, for the boot
+      currently running. Modelled as an info-style metric because the value is
+      a category, and no metrics backend accepts a string as a sample.
+    instrument: gauge
+    unit: "1"
+    attributes:
+      - ref: device.reset.reason
+        requirement_level: required
+
+  # --------------------------------------------------------------------------
+  # Task metrics
+  # --------------------------------------------------------------------------
+  - id: metric.device.task.stack.free
+    type: metric
+    metric_name: device.task.stack.free
+    stability: development
+    brief: >
+      Smallest amount of free stack a task has had since it started (the RTOS
+      high-water mark). The current free stack is not useful — the minimum is
+      what predicts an overflow.
+    instrument: gauge
+    unit: "By"
+    attributes:
+      - ref: device.task.name
+        requirement_level: required
+
+  # --------------------------------------------------------------------------
+  # Link metrics
+  # --------------------------------------------------------------------------
+  - id: metric.device.link.rssi
+    type: metric
+    metric_name: device.link.rssi
+    stability: development
+    brief: >
+      Received signal strength of the associated access point or gateway.
+      Reported only while associated: a value of 0 would read as an excellent
+      signal, so absence is the correct representation of "not connected".
+    instrument: gauge
+    unit: "dBm"
+    attributes:
+      - ref: network.link.channel
+        requirement_level: opt_in
+
+  - id: metric.device.link.connected
+    type: metric
+    metric_name: device.link.connected
+    stability: development
+    brief: 1 while the device is associated with a network, 0 otherwise.
+    instrument: gauge
+    unit: "1"
+
+  - id: metric.device.link.disconnect.count
+    type: metric
+    metric_name: device.link.disconnect.count
+    stability: development
+    brief: Link disconnections observed since boot.
+    instrument: counter
+    unit: "{disconnect}"
+
+  # --------------------------------------------------------------------------
+  # Power metrics
+  # --------------------------------------------------------------------------
+  - id: metric.device.battery.voltage
+    type: metric
+    metric_name: device.battery.voltage
+    stability: development
+    brief: >
+      Battery terminal voltage as measured by the device. Voltage rather than a
+      percentage: the conversion from volts to remaining charge depends on the
+      cell chemistry, the temperature and the load, and every device that
+      reports a percentage has already thrown that context away.
+    instrument: gauge
+    unit: "V"

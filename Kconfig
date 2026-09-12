@@ -1,0 +1,45 @@
+menu "telltale — device health metrics"
+
+    config TELLTALE_MAX_WATCHED_TASKS
+        int "Maximum tasks whose stack headroom is reported"
+        default 4
+        range 1 16
+        help
+            Each watched task costs one metric slot and a few bytes of RAM.
+            The reported value is the FreeRTOS high-water mark, the smallest
+            free stack that task has ever had, which is the number that
+            predicts an overflow.
+
+    config TELLTALE_TASK_STACK_SIZE
+        int "Stack size of the telltale collector task, in bytes"
+        default 3072
+        range 2048 8192
+        help
+            The collector samples the heap, the clock and the radio and then
+            sleeps. 3 kB is comfortable; raise it if you push OTLP from the
+            same task on a target with TLS enabled.
+
+    config TELLTALE_ENABLE_WIFI_COLLECTOR
+        bool "Collect Wi-Fi link metrics (RSSI, channel, association)"
+        default y
+        help
+            Requires the esp_wifi component. Disable on Ethernet-only or
+            radio-less builds to drop the dependency and three metric slots.
+
+    config TELLTALE_ENABLE_HTTP_ENDPOINT
+        bool "Serve GET /metrics over HTTP"
+        default y
+        help
+            Exposes the Prometheus text exposition format on a port of your
+            choosing. The endpoint has no authentication: it is meant for a
+            trusted network segment or behind a reverse proxy.
+
+    config TELLTALE_ENABLE_OTLP
+        bool "Push metrics to an OTLP/HTTP endpoint"
+        default y
+        help
+            Sends the registry as an OTLP/HTTP JSON export request. Use this
+            when devices cannot be scraped — behind NAT, on a cellular link,
+            or asleep most of the time.
+
+endmenu

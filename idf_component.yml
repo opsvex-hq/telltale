@@ -1,0 +1,33 @@
+version: "0.1.0"
+description: >-
+  Device health metrics for ESP-IDF in the shape Prometheus and OpenTelemetry
+  already understand: free heap and fragmentation, reboot count with its cause,
+  link quality, uptime and task stack headroom, over GET /metrics or OTLP/HTTP.
+url: https://github.com/opsvex-hq/telltale
+repository: https://github.com/opsvex-hq/telltale.git
+issues: https://github.com/opsvex-hq/telltale/issues
+documentation: https://github.com/opsvex-hq/telltale/blob/main/README.md
+license: "Apache-2.0"
+
+tags:
+  - metrics
+  - observability
+  - prometheus
+  - opentelemetry
+  - monitoring
+  - diagnostics
+
+dependencies:
+  idf:
+    version: ">=5.0"
+
+targets:
+  - esp32
+  - esp32s2
+  - esp32s3
+  - esp32c3
+  - esp32c6
+
+examples:
+  - path: examples/basic
+  - path: examples/otlp

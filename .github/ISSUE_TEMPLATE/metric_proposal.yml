@@ -1,0 +1,45 @@
+name: New metric or convention change
+description: Propose a metric, or a change to the semantic-convention names
+labels: [enhancement, semconv]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Metric names are a shared vocabulary. A change here affects every
+        dashboard built on telltale, so the bar is "what question does this
+        answer", not "the platform exposes it".
+
+  - type: textarea
+    id: question
+    attributes:
+      label: The question an operator is trying to answer
+      description: Phrase it the way someone says it at 3 a.m., not as an API call.
+      placeholder: Is this device wearing out its flash faster than the others?
+    validations:
+      required: true
+
+  - type: input
+    id: name
+    attributes:
+      label: Proposed dotted name and unit
+      placeholder: device.flash.erase.count, {erase}, counter
+    validations:
+      required: true
+
+  - type: textarea
+    id: source
+    attributes:
+      label: Where the value comes from
+      description: The platform API, and whether it is unambiguous or board-specific.
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: Confirm
+      options:
+        - label: The value is unambiguous on the platform (it does not require guessing a divider ratio, a channel or a calibration)
+          required: true
+        - label: Absence is representable — the metric can be missing rather than reported as zero when unknown
+          required: true

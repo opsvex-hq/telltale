@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/opsvex-hq/telltale/blob/main/SECURITY.md
+    about: Do not open a public issue. Email hola@opsvex.com.
+  - name: Have someone operate your fleet layer
+    url: https://opsvex.com
+    about: Opsvex runs monitoring, IoT telemetry and cloud operations as a service.

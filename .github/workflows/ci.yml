@@ -1,0 +1,114 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # The portable core is where the bugs live, so it is tested first, on two
+  # compilers and under sanitizers. None of this needs an ESP32.
+  host-tests:
+    name: host tests (${{ matrix.cc }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        cc: [gcc, clang]
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Build and run the suite
+        run: make -C host CC=${{ matrix.cc }}
+
+      - name: Re-run under address and UB sanitizers
+        run: make -C host CC=${{ matrix.cc }} asan
+
+  # A 32-bit build catches the size_t and pointer-width assumptions that an
+  # x86-64 host would hide and an ESP32 would find at 3 a.m.
+  host-tests-32bit:
+    name: host tests (32-bit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install 32-bit toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-multilib
+
+      - name: Build and run the suite as 32-bit
+        run: make -C host CC="gcc -m32"
+
+  static-checks:
+    name: static checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cppcheck python3-yaml
+
+      - name: cppcheck on the portable core
+        run: |
+          cppcheck --std=c11 --enable=warning,style,performance,portability \
+            --inline-suppr --error-exitcode=1 \
+            --suppress=missingIncludeSystem \
+            -I portable/include portable/src
+
+      - name: The semantic-convention YAML must parse
+        run: python3 -c "import yaml,sys; d=yaml.safe_load(open('semconv/iot-device.yaml')); print(len(d['groups']), 'groups')"
+
+      - name: The Grafana dashboard must be valid JSON
+        run: python3 -c "import json; d=json.load(open('dashboards/grafana/telltale-device.json')); print(len(d['panels']), 'panels')"
+
+      - name: Formatting (advisory)
+        continue-on-error: true
+        run: |
+          clang-format --version
+          clang-format --dry-run -Werror portable/src/*.c portable/include/*.h src/*.c include/*.h
+
+  # The target build is the only thing that proves the ESP-IDF layer compiles.
+  # Two IDF releases and two architectures, because the Xtensa and RISC-V
+  # targets do not fail in the same places.
+  idf-build:
+    name: idf ${{ matrix.idf }} / ${{ matrix.target }}
+    runs-on: ubuntu-latest
+    container: espressif/idf:${{ matrix.idf }}
+    strategy:
+      fail-fast: false
+      matrix:
+        idf: [release-v5.1, release-v5.3]
+        target: [esp32, esp32c3]
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Build the basic example
+        shell: bash
+        run: |
+          . $IDF_PATH/export.sh
+          idf.py -C examples/basic set-target ${{ matrix.target }}
+          idf.py -C examples/basic build
+
+      - name: Build the OTLP example
+        shell: bash
+        run: |
+          . $IDF_PATH/export.sh
+          idf.py -C examples/otlp set-target ${{ matrix.target }}
+          idf.py -C examples/otlp build
+
+      - name: Report the size telltale actually costs
+        shell: bash
+        run: |
+          . $IDF_PATH/export.sh
+          idf.py -C examples/basic size-components | head -40

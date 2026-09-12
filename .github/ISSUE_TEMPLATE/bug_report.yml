@@ -1,0 +1,64 @@
+name: Bug report
+description: Something behaved differently than documented
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A report from real hardware is the most valuable issue this project can
+        receive: no board has run this code yet.
+
+        Please redact before pasting. Device ids and site names often identify a
+        real customer.
+
+  - type: input
+    id: version
+    attributes:
+      label: telltale version
+      placeholder: 0.1.0 (or a commit sha)
+    validations:
+      required: true
+
+  - type: input
+    id: idf
+    attributes:
+      label: ESP-IDF version and target
+      placeholder: v5.3.1, esp32
+    validations:
+      required: true
+
+  - type: input
+    id: board
+    attributes:
+      label: Board
+      placeholder: ESP32 DevKit v1
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you expected, and what you saw instead.
+    validations:
+      required: true
+
+  - type: textarea
+    id: exposition
+    attributes:
+      label: Relevant metric output
+      description: The lines from /metrics, or the OTLP payload. Redact ids.
+      render: text
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Serial log
+      description: The telltale lines, plus any panic backtrace.
+      render: text
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before filing
+      options:
+        - label: The host suite passes on my machine (make -C host)
+        - label: I checked docs/HARDWARE-VALIDATION.md in case this is a known unverified area

@@ -1,0 +1,17 @@
+# Style for the C sources. Matches the ESP-IDF house style closely enough that
+# a contributor's editor does the right thing by default.
+#
+# The CI check that uses this file is advisory, not a gate: pinning a
+# clang-format version across contributor machines costs more than it saves for
+# a library this size.
+BasedOnStyle: Google
+Language: Cpp
+IndentWidth: 4
+ColumnLimit: 100
+PointerAlignment: Right
+AlignAfterOpenBracket: Align
+AllowShortFunctionsOnASingleLine: None
+AllowShortIfStatementsOnASingleLine: false
+BreakBeforeBraces: Attach
+SortIncludes: false
+SpaceAfterCStyleCast: false
