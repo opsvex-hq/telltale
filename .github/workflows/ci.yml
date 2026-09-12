@@ -107,8 +107,13 @@ jobs:
           idf.py -C examples/otlp set-target ${{ matrix.target }}
           idf.py -C examples/otlp build
 
+      # Informational, not a gate: `size-components` is not available in every
+      # IDF release, and the README's footprint figures are worth having when
+      # it is, but not worth failing a build over when it is not.
       - name: Report the size telltale actually costs
+        continue-on-error: true
         shell: bash
         run: |
           . $IDF_PATH/export.sh
-          idf.py -C examples/basic size-components | head -40
+          idf.py -C examples/basic size-components > size-components.txt 2>&1 || true
+          head -40 size-components.txt
